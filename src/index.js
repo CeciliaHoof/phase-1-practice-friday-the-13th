@@ -1,76 +1,90 @@
-fetch("http://localhost:3000/movies")
+fetch('http://localhost:3000/movies')
     .then(resp => resp.json())
     .then(data => {
-        movieArr = data;
-        createMovieList(movieArr);
-        addMovieInfo(movieArr[0]);
-        buttonHandler();
-        bloodCount();
+        addFirstMovie(data)
+        createMovieNav(data)
+        handleWatchedButton(data)
+        addBloodDrops(data)})
 
-    })
-    //.then(data => buttonHandler(data))
-    //.then(data => addMovieInfo(data))
 
-let movieArr;
-let currentMovieObj;
-const nav = document.querySelector("nav");
-const movieImage = document.querySelector("#detail-image");
-const movieTitle = document.querySelector("#title");
-const movieRelease = document.querySelector("#year-released");
-const movieDes = document.querySelector("#description");
-const watchedButton = document.querySelector('#watched');
-const bloodNum = document.querySelector('#amount');
+const nav = document.querySelector('#movie-list');
+const detailImg = document.querySelector('#detail-image')
+const title = document.querySelector('#title');
+const released = document.querySelector('#year-released');
+const description = document.querySelector('#description');
+const watchedBtn = document.querySelector('#watched');
+const bloodAmt = document.querySelector('#amount');
+const bloodForm = document.querySelector('#blood-form')
 
-function createMovieList(moviesArr){
-    moviesArr.forEach((movie) => {
-        let img = document.createElement('img')
+function createMovieNav(movieArr){
+    movieArr.forEach(movie => {
+        const img = document.createElement('img');
         img.src = movie.image;
         nav.appendChild(img);
+        
         img.addEventListener('click', () => {
-            addMovieInfo(movie);
+            addMovieDetail(movie);
+        })
+    });
+}
+
+function addFirstMovie(movieArr){
+    const firstMovie = movieArr[0];
+    addMovieDetail(firstMovie);
+}
+
+function addMovieDetail(movieObj){
+    detailImg.src = movieObj.image;
+    title.textContent = movieObj.title;
+    released.textContent = movieObj.release_year;
+    description.textContent = movieObj.description;
+    if (movieObj.watched === true)
+        {watchedBtn.textContent = "watched"}
+    else
+        {watchedBtn.textContent = "unwatched"}
+    bloodAmt.textContent = movieObj.blood_amount;
+    bloodAmt.id = movieObj.id;
+    watchedBtn.id = movieObj.id;
+}
+
+function handleWatchedButton(moviesArr){
+    watchedBtn.addEventListener('click', () => {
+        let id = watchedBtn.id;
+        let indexValue = id - 1;
+        let movieObj = moviesArr[indexValue]
+        let watchedStatus;
+        if (movieObj.watched === true){
+            watchedBtn.textContent = "unwatched"
+            watchedStatus = false;
+        }
+        else {
+            watchedBtn.textContent = "watched";
+            watchedStatus = true;
+        }
+        movieObj.watched = watchedStatus;
+        fetch(`http://localhost:3000/movies/${id}`, {
+            method : 'PATCH',
+            headers : {'Content-type' : 'application/json'},
+            body : JSON.stringify(movieObj)
         })
     })
-    return moviesArr;
 }
 
-function addMovieInfo(movieInfoObj){
-    currentMovieObj = movieInfoObj;
-
-    movieImage.src = movieInfoObj.image;
-    movieTitle.textContent = movieInfoObj.title;
-    movieRelease.textContent = movieInfoObj.release_year;
-    movieDes.textContent = movieInfoObj.description;
-    if (movieInfoObj.watched === false){
-        watchedButton.textContent = "unwatched"
-    }
-    else {
-        watchedButton.textContent = "watched"
-    }
-    bloodNum.textContent = movieInfoObj.blood_amount;
-}
-
-function buttonHandler(){
-    watchedButton.addEventListener('click', () => {
-        if (currentMovieObj.watched === false){
-            watchedButton.textContent = "watched"
-            currentMovieObj.watched = true;}
-        else {
-            watchedButton.textContent = "unwatched";
-            currentMovieObj.watched = false;
-        }
-    })
-}
-
-function bloodCount() {
-    const bloodForm = document.querySelector("#blood-form");
-    bloodForm.addEventListener('submit', (event) => {
-        event.preventDefault();
-
-        const amountToAdd = event.target["blood-amount"].value;
-        currentMovieObj.blood_amount = amountToAdd;
-
-        bloodNum.textContent = currentMovieObj.blood_amount;
-
-        event.target.reset();
+function addBloodDrops(movieArr){
+    bloodForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        let id = bloodAmt.id;
+        let indexValue = id - 1;
+        let movieObj = movieArr[indexValue];
+        let amountBloodAdd = parseInt(document.querySelector('#blood-amount').value);
+        let currentBloodAmt = parseInt(bloodAmt.textContent);
+        let newBloodAmt = amountBloodAdd + currentBloodAmt;
+        bloodAmt.textContent = newBloodAmt;
+        movieObj.blood_amount = newBloodAmt;
+        fetch(`http://localhost:3000/movies/${id}`, {
+            method : 'PATCH',
+            headers : {'Content-type' : 'application/json'},
+            body : JSON.stringify(movieObj)
+        })
     })
 }
