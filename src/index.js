@@ -1,90 +1,72 @@
-fetch('http://localhost:3000/movies')
-    .then(resp => resp.json())
-    .then(data => {
-        addFirstMovie(data)
-        createMovieNav(data)
-        handleWatchedButton(data)
-        addBloodDrops(data)})
+//Global
+const baseURL = 'http://localhost:3000/movies';
+let selectedMovie;
 
-
+//Selectors
 const nav = document.querySelector('#movie-list');
-const detailImg = document.querySelector('#detail-image')
+const detailImg = document.querySelector('#detail-image');
 const title = document.querySelector('#title');
 const released = document.querySelector('#year-released');
 const description = document.querySelector('#description');
 const watchedBtn = document.querySelector('#watched');
 const bloodAmt = document.querySelector('#amount');
-const bloodForm = document.querySelector('#blood-form')
+const bloodForm = document.querySelector('#blood-form');
 
-function createMovieNav(movieArr){
-    movieArr.forEach(movie => {
-        const img = document.createElement('img');
-        img.src = movie.image;
-        nav.appendChild(img);
-        
-        img.addEventListener('click', () => {
-            addMovieDetail(movie);
-        })
-    });
+//Fetches
+function getAllMovies(url){
+    fetch(url)
+        .then(resp => resp.json())
+        .then(movieArr => {
+            renderAllMovies(movieArr)
+            renderDetail(movieArr[0])})
 }
 
-function addFirstMovie(movieArr){
-    const firstMovie = movieArr[0];
-    addMovieDetail(firstMovie);
+//render functions
+function renderAllMovies(moviesArr){
+    moviesArr.forEach(movieObj => renderNav(movieObj))
 }
 
-function addMovieDetail(movieObj){
+function renderNav(movieObj){
+    const img = document.createElement('img');
+    img.src = movieObj.image;
+    img.addEventListener('click', () => renderDetail(movieObj))
+    nav.appendChild(img);
+}
+
+function renderDetail(movieObj){
+    selectedMovie = movieObj;
     detailImg.src = movieObj.image;
     title.textContent = movieObj.title;
     released.textContent = movieObj.release_year;
     description.textContent = movieObj.description;
-    if (movieObj.watched === true)
-        {watchedBtn.textContent = "watched"}
-    else
-        {watchedBtn.textContent = "unwatched"}
+    let watchValue = movieObj.watched ? "watched" : "unwatched";
+    watchedBtn.textContent = watchValue
     bloodAmt.textContent = movieObj.blood_amount;
-    bloodAmt.id = movieObj.id;
     watchedBtn.id = movieObj.id;
 }
 
-function handleWatchedButton(moviesArr){
-    watchedBtn.addEventListener('click', () => {
-        let id = watchedBtn.id;
-        let indexValue = id - 1;
-        let movieObj = moviesArr[indexValue]
-        let watchedStatus;
-        if (movieObj.watched === true){
-            watchedBtn.textContent = "unwatched"
-            watchedStatus = false;
-        }
-        else {
-            watchedBtn.textContent = "watched";
-            watchedStatus = true;
-        }
-        movieObj.watched = watchedStatus;
-        fetch(`http://localhost:3000/movies/${id}`, {
-            method : 'PATCH',
-            headers : {'Content-type' : 'application/json'},
-            body : JSON.stringify(movieObj)
-        })
-    })
+//Event listeners and handlers
+watchedBtn.addEventListener('click', toggleWatched)
+
+function toggleWatched(){
+    selectedMovie.watched = !selectedMovie.watched
+    if(selectedMovie.watched){
+        watchedBtn.textContent = "watched"
+    }
+    else{
+        watchedBtn.textContent = "unwatched"
+    }
 }
 
-function addBloodDrops(movieArr){
-    bloodForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        let id = bloodAmt.id;
-        let indexValue = id - 1;
-        let movieObj = movieArr[indexValue];
-        let amountBloodAdd = parseInt(document.querySelector('#blood-amount').value);
-        let currentBloodAmt = parseInt(bloodAmt.textContent);
-        let newBloodAmt = amountBloodAdd + currentBloodAmt;
-        bloodAmt.textContent = newBloodAmt;
-        movieObj.blood_amount = newBloodAmt;
-        fetch(`http://localhost:3000/movies/${id}`, {
-            method : 'PATCH',
-            headers : {'Content-type' : 'application/json'},
-            body : JSON.stringify(movieObj)
-        })
-    })
+bloodForm.addEventListener('submit', (e) => addBloodDrops(e))
+
+function addBloodDrops(e){
+    e.preventDefault();
+    let newBlood = parseInt(e.target['blood-amount'].value);
+    selectedMovie.blood_amount += newBlood;
+    renderDetail(selectedMovie);
+    bloodForm.reset();  
 }
+
+//Initializers
+getAllMovies(baseURL)
